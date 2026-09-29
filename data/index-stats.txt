@@ -1,4 +1,0 @@
-posts=1722
-comments=5992
-chunks=1989
-dimensions=512
