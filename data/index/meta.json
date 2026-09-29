@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "model": "none",
+  "dimensions": 0,
+  "builtAt": "2026-09-29T15:48:13.764Z",
+  "posts": 1718,
+  "comments": 5989,
+  "chunks": 1842,
+  "quantization": "int8",
+  "newestPost": "2026-09-20",
+  "oldestPost": "2026-03-29"
+}
