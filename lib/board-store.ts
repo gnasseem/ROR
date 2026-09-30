@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import type { Announcement, Answer, BoardEvent, EventKind, Offer, Profile, Question } from './board.ts';
 import { ApiError } from './http.ts';
 
-export interface BoardStats {
+interface BoardStats {
   open: number;
   answered: number;
   answers: number;
@@ -37,7 +37,6 @@ export interface BoardStore {
   /** Questions with at least one answer, newest first, for the answer engine. */
   listAnswered(limit: number): Promise<Question[]>;
   listAnswers(questionIds: string[]): Promise<Answer[]>;
-  listAnswersByHelper(netId: string): Promise<Answer[]>;
   /** The newest answers across the board, for the leaderboard. */
   listRecentAnswers(limit: number): Promise<Answer[]>;
   createAnswer(answer: Omit<Answer, 'id' | 'createdAt'>): Promise<Answer>;
@@ -118,9 +117,6 @@ export class MemoryBoardStore implements BoardStore {
     const wanted = new Set(questionIds);
     return this.answers.filter((answer) => wanted.has(answer.questionId));
   }
-  async listAnswersByHelper(netId: string): Promise<Answer[]> {
-    return this.answers.filter((answer) => answer.helperNetId === netId);
-  }
   async listRecentAnswers(limit: number): Promise<Answer[]> {
     return [...this.answers].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit);
   }
@@ -196,7 +192,7 @@ export class MemoryBoardStore implements BoardStore {
   }
 }
 
-export function sortAnnouncements(entries: Announcement[]): Announcement[] {
+function sortAnnouncements(entries: Announcement[]): Announcement[] {
   return [...entries].sort((a, b) => {
     if (a.startsAt && b.startsAt) return a.startsAt.localeCompare(b.startsAt);
     if (a.startsAt || b.startsAt) return a.startsAt ? -1 : 1;
@@ -206,7 +202,7 @@ export function sortAnnouncements(entries: Announcement[]): Announcement[] {
 
 /* ---------- Supabase (PostgREST) ---------- */
 
-export interface SupabaseConfig {
+interface SupabaseConfig {
   url: string;
   serviceKey: string;
 }
@@ -267,28 +263,28 @@ export function storageError(status: number, body: string, what = 'request'): Ap
   if (missingTable || missingFunction) {
     return new ApiError(
       503,
-      'The board tables are not in this Supabase project yet. Open the project in Supabase, go to SQL Editor → New query, paste the whole of supabase/schema.sql and run it, then try again.',
+      'The board tables are missing: run supabase/schema.sql in this Supabase project.',
       'board_schema_missing',
     );
   }
   if (status === 401 || status === 403 || code === '42501' || code === 'PGRST301' || /row-level security|invalid api key|jwt|permission denied|apikey/i.test(message)) {
     return new ApiError(
       503,
-      'Supabase rejected the board key. SUPABASE_SERVICE_ROLE_KEY must be the service_role (secret) key from Project → Settings → API, not the anon or publishable key, and SUPABASE_URL must be the same project.',
+      'Supabase rejected the board key: SUPABASE_SERVICE_ROLE_KEY must be the service_role key of the project at SUPABASE_URL.',
       'board_key_rejected',
     );
   }
   if (status === 404 && !code) {
-    return new ApiError(503, 'SUPABASE_URL does not point at a Supabase REST API. Use the project URL from Project → Settings → API, which looks like https://abcdefghijklmnopqrst.supabase.co.', 'board_url_wrong');
+    return new ApiError(503, 'SUPABASE_URL is not a Supabase project URL like https://abcdefghijklmnopqrst.supabase.co.', 'board_url_wrong');
   }
   if (status >= 500 || /paused|not available|unavailable/i.test(message)) {
     return new ApiError(
       503,
-      `Supabase is not answering (${status}${message ? `: ${message}` : ''}). Free projects pause after a week without traffic: open the Supabase dashboard and restore the project.`,
+      `Supabase is not answering (${status}${message ? `: ${message}` : ''}), which usually means the project is paused.`,
       'board_unreachable',
     );
   }
-  return new ApiError(502, `The board database refused that (${status}${message ? `: ${message}` : ''}).`, 'board_storage');
+  return new ApiError(502, `The board database refused the request (${status}${message ? `: ${message}` : ''}).`, 'board_storage');
 }
 
 type Row = Record<string, unknown>;
@@ -303,7 +299,7 @@ export class SupabaseBoardStore implements BoardStore {
       return {
         ok: false,
         code: 'board_key_rejected',
-        problem: 'SUPABASE_SERVICE_ROLE_KEY holds the anon (public) key, which row level security stops from writing anything. Paste the service_role secret from Project → Settings → API instead.',
+        problem: 'SUPABASE_SERVICE_ROLE_KEY is the anon key, not the service_role key.',
       };
     }
     try {
@@ -358,9 +354,6 @@ export class SupabaseBoardStore implements BoardStore {
   async listAnswers(questionIds: string[]): Promise<Answer[]> {
     if (questionIds.length === 0) return [];
     return (await this.select('board_answers', `question_id=in.(${questionIds.map(enc).join(',')})&order=created_at.asc`)).map(answerFrom);
-  }
-  async listAnswersByHelper(netId: string): Promise<Answer[]> {
-    return (await this.select('board_answers', `helper_net_id=eq.${enc(netId)}&order=created_at.desc&limit=200`)).map(answerFrom);
   }
   async listRecentAnswers(limit: number): Promise<Answer[]> {
     return (await this.select('board_answers', `order=created_at.desc&limit=${limit}`)).map(answerFrom);
@@ -488,7 +481,7 @@ export class SupabaseBoardStore implements BoardStore {
         if (readOnly && attempt === 0) continue;
         const reason = error instanceof Error ? error.message : String(error);
         console.error(`[board] could not reach Supabase for ${what}: ${reason}`);
-        throw new ApiError(503, `Could not reach Supabase at ${new URL(this.cfg.url).host} (${reason}). Check SUPABASE_URL and that the project is not paused.`, 'board_unreachable');
+        throw new ApiError(503, `Could not reach Supabase at ${new URL(this.cfg.url).host} (${reason}).`, 'board_unreachable');
       }
       const text = await response.text();
       if (response.ok) return text ? JSON.parse(text) : null;
@@ -598,9 +591,4 @@ export function boardStore(env: NodeJS.ProcessEnv = process.env): BoardStore | n
   else if (env.ROR_BOARD_STORE === 'memory' || (env.NODE_ENV !== 'production' && env.VERCEL !== '1')) shared = new MemoryBoardStore();
   else shared = null;
   return shared;
-}
-
-/** Test hook. */
-export function resetBoardStore(): void {
-  shared = undefined;
 }

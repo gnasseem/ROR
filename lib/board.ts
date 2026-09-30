@@ -16,7 +16,7 @@ export const MAJORS = [
   'Political Science', 'Psychology', 'Social Research and Public Policy', 'Theater', 'Undecided', 'Other',
 ] as const;
 
-export const STANDINGS = ['first-year', 'sophomore', 'junior', 'senior', 'alumni'] as const;
+const STANDINGS = ['first-year', 'sophomore', 'junior', 'senior', 'alumni'] as const;
 export type Standing = (typeof STANDINGS)[number];
 export const STANDING_LABELS: Record<Standing, string> = { 'first-year': 'First year', sophomore: 'Sophomore', junior: 'Junior', senior: 'Senior', alumni: 'Alumni' };
 
@@ -30,7 +30,7 @@ export interface Profile {
   lastSeenAt: string;
 }
 
-export type QuestionStatus = 'open' | 'answered' | 'closed';
+type QuestionStatus = 'open' | 'answered' | 'closed';
 
 export interface Question {
   id: string;
@@ -73,12 +73,12 @@ export interface BoardEvent {
   createdAt: string;
 }
 
-export const QUESTION_MIN = 12;
+const QUESTION_MIN = 12;
 export const QUESTION_MAX = 600;
-export const ANSWER_MIN = 2;
-export const ANSWER_MAX = 1200;
+const ANSWER_MIN = 2;
+const ANSWER_MAX = 1200;
 /** Questions stop being handed out once this many people have answered. */
-export const ENOUGH_ANSWERS = 3;
+const ENOUGH_ANSWERS = 3;
 
 /** The academic year turns over on 1 May: the class of 2026 graduates on 1 May 2026, and the class of 2030 is a first-year from then. */
 export function academicYearOf(now = new Date()): number {
@@ -100,19 +100,19 @@ export function validateNetId(value: unknown): string {
   const netId = String(value ?? '')
     .trim()
     .toLowerCase();
-  if (!/^[a-z]{1,8}\d{1,6}$/.test(netId)) throw new ApiError(400, 'That does not look like a NetID (letters then digits, like abc1234).', 'bad_net_id');
+  if (!/^[a-z]{1,8}\d{1,6}$/.test(netId)) throw new ApiError(400, 'Enter a NetID like abc1234.', 'bad_net_id');
   return netId;
 }
 
 export function validateProfile(body: Record<string, unknown>): Pick<Profile, 'netId' | 'name' | 'major' | 'classOf'> {
   const netId = validateNetId(body.netId);
   const name = collapseWhitespace(String(body.name ?? '')).slice(0, 60);
-  if (name.length < 2) throw new ApiError(400, 'Add your name.', 'bad_name');
+  if (name.length < 2) throw new ApiError(400, 'Enter your name.', 'bad_name');
   const major = collapseWhitespace(String(body.major ?? '')).slice(0, 60);
-  if (!major) throw new ApiError(400, 'Pick a major.', 'bad_major');
+  if (!major) throw new ApiError(400, 'Choose a major.', 'bad_major');
   const classOf = Number(body.classOf);
   const thisYear = new Date().getUTCFullYear();
-  if (!Number.isInteger(classOf) || classOf < thisYear - 15 || classOf > thisYear + 6) throw new ApiError(400, 'Pick your class year.', 'bad_class_of');
+  if (!Number.isInteger(classOf) || classOf < thisYear - 15 || classOf > thisYear + 6) throw new ApiError(400, 'Choose a class year.', 'bad_class_of');
   return { netId, name, major, classOf };
 }
 
@@ -122,7 +122,7 @@ export function validateQuestionText(value: unknown): string {
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
-  if (text.length < QUESTION_MIN) throw new ApiError(400, 'Give people a little more to go on.', 'question_too_short');
+  if (text.length < QUESTION_MIN) throw new ApiError(400, 'The question is too short.', 'question_too_short');
   if (text.length > QUESTION_MAX) throw new ApiError(400, `Keep questions under ${QUESTION_MAX} characters.`, 'question_too_long');
   return text;
 }
@@ -131,7 +131,7 @@ export function validateAnswerText(value: unknown): string {
   const text = String(value ?? '')
     .replace(/\r\n?/g, '\n')
     .trim();
-  if (text.length < ANSWER_MIN) throw new ApiError(400, 'Write an answer first.', 'answer_too_short');
+  if (text.length < ANSWER_MIN) throw new ApiError(400, 'The answer is too short.', 'answer_too_short');
   if (text.length > ANSWER_MAX) throw new ApiError(400, `Keep answers under ${ANSWER_MAX} characters.`, 'answer_too_long');
   return text;
 }
@@ -142,7 +142,7 @@ export function validateKey(value: unknown): string {
   return key;
 }
 
-export interface QuestionTags {
+interface QuestionTags {
   summary: string;
   topics: string[];
   courses: string[];
@@ -206,7 +206,7 @@ export async function tagQuestion(cfg: GeminiConfig | null, text: string): Promi
   }
 }
 
-export interface HelperContext {
+interface HelperContext {
   profile: Profile;
   /** Everything this helper has already done, so nothing is shown twice. */
   events: BoardEvent[];
@@ -244,7 +244,7 @@ export function pickNext(questions: Question[], context: HelperContext): Questio
   return best?.question ?? null;
 }
 
-export interface BoardHit {
+interface BoardHit {
   question: Question;
   answers: Answer[];
   score: number;
@@ -280,9 +280,8 @@ export function searchBoard(entries: Array<{ question: Question; answers: Answer
 
 /* ---------- Announcements ---------- */
 
-export const ANNOUNCEMENT_KINDS = ['event', 'deadline', 'opportunity', 'club', 'notice'] as const;
+const ANNOUNCEMENT_KINDS = ['event', 'deadline', 'opportunity', 'club', 'notice'] as const;
 export type AnnouncementKind = (typeof ANNOUNCEMENT_KINDS)[number];
-export const ANNOUNCEMENT_LABELS: Record<AnnouncementKind, string> = { event: 'Event', deadline: 'Deadline', opportunity: 'Opportunity', club: 'Club', notice: 'Notice' };
 
 export interface Announcement {
   id: string;
@@ -301,23 +300,23 @@ export interface Announcement {
   createdAt: string;
 }
 
-export const ANNOUNCEMENT_DAYS = 14;
+const ANNOUNCEMENT_DAYS = 14;
 
 export function validateAnnouncement(body: Record<string, unknown>, now = new Date()): Omit<Announcement, 'id' | 'createdAt' | 'posterKey' | 'posterNetId' | 'posterName'> {
   const title = collapseWhitespace(String(body.title ?? '')).slice(0, 120);
-  if (title.length < 4) throw new ApiError(400, 'Give the announcement a title.', 'bad_title');
+  if (title.length < 4) throw new ApiError(400, 'Enter a title.', 'bad_title');
   const text = String(body.body ?? '')
     .replace(/\r\n?/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
   if (text.length > 1500) throw new ApiError(400, 'Keep the details under 1,500 characters.', 'body_too_long');
   const kind = String(body.kind ?? 'notice') as AnnouncementKind;
-  if (!ANNOUNCEMENT_KINDS.includes(kind)) throw new ApiError(400, 'Pick what kind of announcement this is.', 'bad_kind');
+  if (!ANNOUNCEMENT_KINDS.includes(kind)) throw new ApiError(400, 'Choose a kind.', 'bad_kind');
   let startsAt: string | undefined;
   if (body.startsAt) {
     const parsed = Date.parse(String(body.startsAt));
-    if (Number.isNaN(parsed)) throw new ApiError(400, 'That date did not make sense.', 'bad_date');
-    if (parsed < now.getTime() - 86_400_000) throw new ApiError(400, 'That date is already in the past.', 'past_date');
+    if (Number.isNaN(parsed)) throw new ApiError(400, 'The date is invalid.', 'bad_date');
+    if (parsed < now.getTime() - 86_400_000) throw new ApiError(400, 'The date is in the past.', 'past_date');
     startsAt = new Date(parsed).toISOString();
   }
   const location = collapseWhitespace(String(body.location ?? '')).slice(0, 80);
@@ -383,7 +382,7 @@ export function leaderboard(answers: Answer[], now = new Date(), limit = 10): Le
 /* ---------- Falcons: the campus-dirham exchange ---------- */
 
 export type OfferSide = 'sell' | 'buy';
-export const CONTACT_KINDS = ['whatsapp', 'instagram', 'email', 'phone'] as const;
+const CONTACT_KINDS = ['whatsapp', 'instagram', 'email', 'phone'] as const;
 export type ContactKind = (typeof CONTACT_KINDS)[number];
 
 export interface Offer {
@@ -405,22 +404,22 @@ export interface Offer {
   createdAt: string;
 }
 
-export const OFFER_DAYS = 5;
-export const OFFER_MIN = 5;
-export const OFFER_MAX = 20_000;
+const OFFER_DAYS = 5;
+const OFFER_MIN = 5;
+const OFFER_MAX = 20_000;
 
 export function validateOffer(body: Record<string, unknown>, now = new Date()): Omit<Offer, 'id' | 'createdAt' | 'posterKey' | 'posterNetId' | 'posterName' | 'status'> {
   const side = String(body.side ?? '') as OfferSide;
-  if (side !== 'sell' && side !== 'buy') throw new ApiError(400, 'Say whether you are selling or buying Falcons.', 'bad_side');
+  if (side !== 'sell' && side !== 'buy') throw new ApiError(400, 'Choose sell or buy.', 'bad_side');
   const amount = Math.round(Number(body.amount));
   if (!Number.isFinite(amount) || amount < OFFER_MIN || amount > OFFER_MAX) throw new ApiError(400, `Amount must be between ${OFFER_MIN} and ${OFFER_MAX.toLocaleString()} Falcons.`, 'bad_amount');
   const rate = Math.round(Number(body.rate) * 100) / 100;
-  if (!Number.isFinite(rate) || rate < 0.1 || rate > 2) throw new ApiError(400, 'Rate is dirhams per Falcon, between 0.10 and 2.00.', 'bad_rate');
+  if (!Number.isFinite(rate) || rate < 0.1 || rate > 2) throw new ApiError(400, 'The rate must be between 0.10 and 2.00 AED per Falcon.', 'bad_rate');
   const contactKind = String(body.contactKind ?? 'whatsapp') as ContactKind;
-  if (!CONTACT_KINDS.includes(contactKind)) throw new ApiError(400, 'Pick how people should contact you.', 'bad_contact_kind');
+  if (!CONTACT_KINDS.includes(contactKind)) throw new ApiError(400, 'Choose a contact method.', 'bad_contact_kind');
   const contact = collapseWhitespace(String(body.contact ?? '')).slice(0, 80);
-  if (contact.length < 3) throw new ApiError(400, 'Add a way to reach you.', 'bad_contact');
-  if (contactKind === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact)) throw new ApiError(400, 'That email does not look right.', 'bad_contact');
+  if (contact.length < 3) throw new ApiError(400, 'Enter your contact details.', 'bad_contact');
+  if (contactKind === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact)) throw new ApiError(400, 'Enter a valid email address.', 'bad_contact');
   if ((contactKind === 'whatsapp' || contactKind === 'phone') && !/^\+?[\d\s()-]{7,20}$/.test(contact)) throw new ApiError(400, 'Use a phone number with the country code, like +971 50 123 4567.', 'bad_contact');
   const note = collapseWhitespace(String(body.note ?? '')).slice(0, 200);
   const expiresAt = new Date(now.getTime() + OFFER_DAYS * 86_400_000).toISOString();

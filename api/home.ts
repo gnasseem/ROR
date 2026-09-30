@@ -1,6 +1,6 @@
 import { route, sendJson } from '../lib/http.ts';
 import { loadArchive, summarizePost } from '../lib/store.ts';
-import { sampleSuggestions } from '../lib/suggestions.ts';
+import { starterQuestions } from '../lib/suggestions.ts';
 import { dayNumber } from '../lib/text.ts';
 import { TOPIC_LABELS } from '../lib/topics.ts';
 
@@ -18,7 +18,7 @@ export default route(['GET'], async (_req, res) => {
     .map((post) => summarizePost(post));
   const topics = [...archive.byTopic.entries()]
     .filter(([id]) => id !== 'general')
-    .map(([id, positions]) => ({ id, label: TOPIC_LABELS[id]?.label ?? id, emoji: TOPIC_LABELS[id]?.emoji ?? '', count: positions.length }))
+    .map(([id, positions]) => ({ id, label: TOPIC_LABELS[id] ?? id, count: positions.length }))
     .sort((a, b) => b.count - a.count);
   const courses = [...archive.byCourse.entries()]
     .map(([code, positions]) => ({ code, count: positions.length }))
@@ -37,7 +37,7 @@ export default route(['GET'], async (_req, res) => {
         builtAt: archive.meta.builtAt,
         semantic: archive.vectors.count > 0,
       },
-      suggestions: sampleSuggestions(8, Math.floor(Date.now() / 3_600_000)),
+      suggestions: starterQuestions(),
       trending,
       latest: archive.posts.slice(0, 8).map((post) => summarizePost(post)),
       topics,
