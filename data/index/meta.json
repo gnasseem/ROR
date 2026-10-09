@@ -2,13 +2,13 @@
   "version": 2,
   "model": "voyage-3.5",
   "dimensions": 1024,
-  "builtAt": "2026-10-09T03:36:57.210Z",
-  "posts": 15527,
-  "comments": 68131,
-  "chunks": 18338,
+  "builtAt": "2026-10-09T11:34:22.978Z",
+  "posts": 13992,
+  "comments": 67698,
+  "chunks": 16803,
   "quantization": "int8",
   "newestPost": "2026-10-07",
   "oldestPost": "2011-07-28",
-  "filters": 2,
+  "filters": 4,
   "provider": "voyage"
 }
